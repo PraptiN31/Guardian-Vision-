@@ -1,7 +1,5 @@
 # 𝗚𝘂𝗮𝗿𝗱𝗶𝗮𝗻 𝗩𝗶𝘀𝗶𝗼𝗻  
-`hackathon product` ![Mauve Label](https://img.shields.io/badge/hackathon%20product-mauve?color=8c6a9e)
-   ____                   _ _             _   _      _                 
-  / ___|_   _ _ __   __ _| (_) __ _ _ __ | |_| | ___| |_ ___  _ __ ___ 
+![Mauve Label](https://img.shields.io/badge/hackathon%20product-mauve?color=8c6a9e)
 
 
 ---

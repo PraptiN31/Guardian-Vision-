@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guardian Vision - Tech Enhanced</title>
+  <!-- TensorFlow.js + COCO-SSD -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  <style>
+    :root {
+      --primary-color: #0f0;
+      --secondary-color: #0a0;
+      --neon-blue: #00f3ff;
+      --neon-purple: #d100ff;
+      --background-dark: #0a0a0a;
+      --background-darker: #1a1a1a;
+      --text-light: #fff;
+      --text-muted: #888;
+      --danger: #ff3333;
+      --success: #33ff33;
+      --warning: #ffcc00;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', 'Roboto Mono', monospace;
+      background: linear-gradient(135deg, var(--background-dark), var(--background-darker));
+      color: var(--text-light);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 20px;
+      position: relative;
+    }
+    
+    /* Animated background elements */
+    .tech-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.1;
+      pointer-events: none;
+    }
+    
+    .grid-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(to right, var(--neon-blue) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--neon-blue) 1px, transparent 1px);
+      background-size: 50px 50px;
+      opacity: 0.1;
+    }
+    
+    .floating-element {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--neon-purple), transparent 70%);
+      opacity: 0.1;
+      animation: float 15s infinite ease-in-out;
+    }
+    
+    .floating-element:nth-child(1) {
+      width: 300px;
+      height: 300px;
+      top: -150px;
+      left: -150px;
+      animation-delay: 0s;
+    }
+    
+    .floating-element:nth-child(2) {
+      width: 200px;
+      height: 200px;
+      bottom: -100px;
+      right: -100px;
+      animation-delay: -5s;
+      background: radial-gradient(circle, var(--neon-blue), transparent 70%);
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(-20px, 20px) rotate(5deg); }
+      50% { transform: translate(10px, -15px) rotate(-3deg); }
+      75% { transform: translate(15px, 10px) rotate(2deg); }
+    }
+    
+    header {
+      width: 100%;
+      text-align: center;
+      padding: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      position: relative;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .header-text {
+      background: linear-gradient(45deg, var(--primary-color), var(--neon-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+      position: relative;
+      display: inline-block;
+    }
+    
+    .header-text::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+      animation: scanline 3s linear infinite;
+    }
+    
+    @keyframes scanline {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      width: 800px;
+      max-width: 100%;
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 12px;
+      font-size: 14px;
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .status-bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+      animation: scanline 2s linear infinite;
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 10px;
+      position: relative;
+    }
+    
+    .status-indicator.active {
+      background-color: var(--success);
+      box-shadow: 0 0 10px var(--success);
+      animation: pulse 2s infinite;
+    }
+    
+    .status-indicator.inactive {
+      background-color: var(--danger);
+      box-shadow: 0 0 5px var(--danger);
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(51, 255, 51, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(51, 255, 51, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(51, 255, 51, 0); }
+    }
+    
+    .status-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .status-value {
+      font-size: 14px;
+      font-weight: bold;
+      margin-left: 5px;
+      color: var(--neon-blue);
+    }
+    
+    .camera-container {
+      position: relative;
+      display: inline-block;
+      margin: 10px 0;
+      width: 800px;
+      max-width: 100%;
+      height: 600px;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+      border: 1px solid rgba(0, 243, 255, 0.5);
+      transition: all 0.3s ease;
+    }
+    
+    .camera-container:hover {
+      box-shadow: 0 0 40px rgba(0, 243, 255, 0.4);
+    }
+    
+    video, canvas {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0; 
+      left: 0;
+      object-fit: cover;
+      border-radius: 15px;
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin: 25px 0;
+      width: 800px;
+      max-width: 100%;
+    }
+    
+    button {
+      padding: 14px 28px;
+      font-size: 16px;
+      border-radius: 8px;
+      background: linear-gradient(45deg, var(--primary-color), var(--neon-blue));
+      color: #111;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 160px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    }
+    
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: all 0.5s ease;
+    }
+    
+    button:hover::before {
+      left: 100%;
+    }
+    
+    button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.5);
+    }
+    
+    button:active {
+      transform: translateY(1px);
+    }
+    
+    button:disabled {
+      background: #444;
+      color: #777;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    
+    button:disabled::before {
+      display: none;
+    }
+    
+    .settings-panel {
+      width: 800px;
+      max-width: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .settings-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-purple), transparent);
+      animation: scanline 3s linear infinite;
+    }
+    
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+    
+    .settings-label {
+      font-size: 16px;
+      color: var(--neon-blue);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+    
+    .settings-control {
+      background-color: rgba(0, 0, 0, 0.8);
+      color: var(--primary-color);
+      border: 1px solid var(--neon-blue);
+      border-radius: 8px;
+      padding: 10px 15px;
+      width: 150px;
+      font-family: 'Roboto Mono', monospace;
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .settings-control:focus {
+      outline: none;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    }
+    
+    .detection-log {
+      width: 800px;
+      max-width: 100%;
+      height: 150px;
+      overflow-y: auto;
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 14px;
+      font-family: 'Roboto Mono', monospace;
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+    }
+    
+    .detection-log::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .detection-log::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+    
+    .detection-log::-webkit-scrollbar-thumb {
+      background: var(--neon-blue);
+      border-radius: 4px;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      animation: logEntry 0.5s ease;
+      position: relative;
+    }
+    
+    .log-entry::before {
+      content: '>';
+      color: var(--primary-color);
+      margin-right: 10px;
+      font-weight: bold;
+    }
+    
+    @keyframes logEntry {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .emergency-alert {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      z-index: 1000;
+      box-shadow: 0 0 50px rgba(255, 0, 0, 0.7);
+      display: none;
+      width: 80%;
+      max-width: 500px;
+      border: 2px solid var(--danger);
+      animation: alertPulse 2s infinite;
+    }
+    
+    @keyframes alertPulse {
+      0% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.7); }
+      50% { box-shadow: 0 0 50px rgba(255, 0, 0, 0.9); }
+      100% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.7); }
+    }
+    
+    .emergency-alert h2 {
+      margin-bottom: 20px;
+      font-size: 28px;
+      color: var(--danger);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .emergency-alert p {
+      margin-bottom: 25px;
+      font-size: 18px;
+      line-height: 1.5;
+    }
+    
+    .emergency-buttons {
+      display: flex;
+      justify-content: space-around;
+    }
+    
+    .emergency-buttons button {
+      min-width: 120px;
+    }
+    
+    .emergency-buttons button:first-child {
+      background: linear-gradient(45deg, #4CAF50, #2E8B57);
+    }
+    
+    .emergency-buttons button:last-child {
+      background: linear-gradient(45deg, #f44336, #B22222);
+    }
+    
+    .fall-simulation {
+      margin-top: 15px;
+      padding: 15px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 10px;
+      border: 1px solid var(--warning);
+    }
+    
+    footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 15px;
+      width: 100%;
+      border-top: 1px solid rgba(0, 243, 255, 0.2);
+    }
+    
+    /* HUD elements */
+    .hud-element {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid var(--neon-blue);
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+      z-index: 5;
+    }
+    
+    .hud-top-left {
+      top: 20px;
+      left: 20px;
+    }
+    
+    .hud-top-right {
+      top: 20px;
+      right: 20px;
+      text-align: right;
+    }
+    
+    .hud-bottom-left {
+      bottom: 20px;
+      left: 20px;
+    }
+    
+    .hud-bottom-right {
+      bottom: 20px;
+      right: 20px;
+      text-align: right;
+    }
+    
+    .hud-title {
+      color: var(--neon-blue);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+    }
+    
+    .hud-value {
+      color: var(--primary-color);
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 850px) {
+      .camera-container {
+        width: 100%;
+        height: 400px;
+      }
+      
+      .status-bar, .controls, .settings-panel, .detection-log {
+        width: 100%;
+      }
+      
+      .hud-element {
+        display: none; /* Hide HUD on smaller screens */
+      }
+    }
+    
+    @media (max-width: 600px) {
+      header {
+        font-size: 20px;
+        padding: 15px;
+      }
+      
+      .camera-container {
+        height: 300px;
+      }
+      
+      button {
+        min-width: 140px;
+        padding: 12px 20px;
+        font-size: 14px;
+      }
+      
+      .settings-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .settings-control {
+        width: 100%;
+        margin-top: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Animated background elements -->
+  <div class="tech-bg">
+    <div class="grid-lines"></div>
+    <div class="floating-element"></div>
+    <div class="floating-element"></div>
+  </div>
+
+  <header>
+    <div class="header-text">Guardian Vision OS v2.0</div>
+  </header>
+
+  <!-- HUD Elements -->
+  <div class="hud-element hud-top-left">
+    <div class="hud-title">System Status</div>
+    <div class="hud-value" id="hud-status">Initializing</div>
+  </div>
+  
+  <div class="hud-element hud-top-right">
+    <div class="hud-title">Detection Mode</div>
+    <div class="hud-value">Multi-Object Tracking</div>
+  </div>
+  
+  <div class="hud-element hud-bottom-left">
+    <div class="hud-title">Objects Detected</div>
+    <div class="hud-value" id="hud-objects">0</div>
+  </div>
+  
+  <div class="hud-element hud-bottom-right">
+    <div class="hud-title">Processing Power</div>
+    <div class="hud-value">87%</div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="status-indicator inactive" id="model-status"></span>
+      <span class="status-label">AI Model:</span>
+      <span class="status-value" id="model-value">Loading</span>
+    </div>
+    <div class="status-item">
+      <span class="status-indicator inactive" id="camera-status"></span>
+      <span class="status-label">Camera:</span>
+      <span class="status-value" id="camera-value">Offline</span>
+    </div>
+    <div class="status-item">
+      <span class="status-indicator inactive" id="audio-status"></span>
+      <span class="status-label">Audio:</span>
+      <span class="status-value" id="audio-value">Disabled</span>
+    </div>
+    <div class="status-item">
+      <span class="status-indicator inactive" id="fall-status"></span>
+      <span class="status-label">Fall Detection:</span>
+      <span class="status-value" id="fall-value">Standby</span>
+    </div>
+  </div>
+
+  <div class="camera-container">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="start-btn" onclick="startCamera()">Initialize System</button>
+    <button id="stop-btn" onclick="stopCamera()" disabled>Terminate</button>
+    <button id="simulate-fall" onclick="simulateFall()">Simulate Fall</button>
+  </div>
+
+  <div class="settings-panel">
+    <div class="settings-row">
+      <span class="settings-label">Confidence Threshold</span>
+      <input type="range" id="confidence-slider" min="0.1" max="0.9" step="0.1" value="0.6" class="settings-control">
+      <span id="confidence-value">0.6</span>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Audio Feedback</span>
+      <input type="checkbox" id="audio-toggle" checked class="settings-control">
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Detection Cooldown (ms)</span>
+      <input type="number" id="cooldown-input" min="1000" max="10000" step="1000" value="3000" class="settings-control">
+    </div>
+    
+    <div class="fall-simulation">
+      <div class="settings-row">
+        <span class="settings-label">Emergency Contact</span>
+        <input type="text" id="emergency-contact" value="Emergency Services" class="settings-control">
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Auto-Contact on Fall</span>
+        <input type="checkbox" id="auto-contact-toggle" checked class="settings-control">
+      </div>
+    </div>
+  </div>
+
+  <div class="detection-log" id="detection-log">
+    <div class="log-entry">System boot sequence initiated</div>
+    <div class="log-entry">Loading neural network modules</div>
+    <div class="log-entry">Initializing sensor array</div>
+    <div class="log-entry">Awaiting user command</div>
+  </div>
+
+  <div class="emergency-alert" id="emergency-alert">
+    <h2>🚨 EMERGENCY ALERT</h2>
+    <p>Fall detected! Contacting emergency services in <span id="countdown">10</span> seconds...</p>
+    <div class="emergency-buttons">
+      <button onclick="cancelEmergency()">I'm OK</button>
+      <button onclick="confirmEmergency()">Call for Help</button>
+    </div>
+  </div>
+
+  <footer>Guardian Vision OS v2.0 • Advanced Neural Processing • Hackathon Prototype</footer>
+
+  <script>
+    // All 80 COCO-SSD classes
+    const ALL_COCO_CLASSES = [
+      'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 
+      'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign', 
+      'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 
+      'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 
+      'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 
+      'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 
+      'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 
+      'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange', 
+      'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 
+      'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 
+      'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 
+      'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 
+      'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+    ];
+
+    // Global variables
+    let model;
+    let isModelLoaded = false;
+    let isCameraActive = false;
+    let audioEnabled = true;
+    let autoContactEnabled = true;
+    let detectionInterval;
+    let fallDetectionActive = false;
+    let emergencyCountdown;
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    
+    // DOM elements
+    const startBtn = document.getElementById("start-btn");
+    const stopBtn = document.getElementById("stop-btn");
+    const simulateFallBtn = document.getElementById("simulate-fall");
+    const modelStatus = document.getElementById("model-status");
+    const cameraStatus = document.getElementById("camera-status");
+    const audioStatus = document.getElementById("audio-status");
+    const fallStatus = document.getElementById("fall-status");
+    const modelValue = document.getElementById("model-value");
+    const cameraValue = document.getElementById("camera-value");
+    const audioValue = document.getElementById("audio-value");
+    const fallValue = document.getElementById("fall-value");
+    const hudStatus = document.getElementById("hud-status");
+    const hudObjects = document.getElementById("hud-objects");
+    const confidenceSlider = document.getElementById("confidence-slider");
+    const confidenceValue = document.getElementById("confidence-value");
+    const audioToggle = document.getElementById("audio-toggle");
+    const autoContactToggle = document.getElementById("auto-contact-toggle");
+    const cooldownInput = document.getElementById("cooldown-input");
+    const emergencyContact = document.getElementById("emergency-contact");
+    const detectionLog = document.getElementById("detection-log");
+    const emergencyAlert = document.getElementById("emergency-alert");
+    const countdownElement = document.getElementById("countdown");
+
+    // Settings with defaults
+    let CONFIDENCE_THRESHOLD = 0.6;
+    let IMPORTANT_CLASSES = [...ALL_COCO_CLASSES];
+    const detectionHistory = {};
+    let ANNOUNCE_COOLDOWN = 3000; // ms
+
+    // Update status indicators
+    function updateStatusIndicators() {
+      modelStatus.className = isModelLoaded ? 
+        "status-indicator active" : "status-indicator inactive";
+      modelValue.textContent = isModelLoaded ? "Online" : "Offline";
+      
+      cameraStatus.className = isCameraActive ? 
+        "status-indicator active" : "status-indicator inactive";
+      cameraValue.textContent = isCameraActive ? "Active" : "Offline";
+      
+      audioStatus.className = audioEnabled ? 
+        "status-indicator active" : "status-indicator inactive";
+      audioValue.textContent = audioEnabled ? "Enabled" : "Disabled";
+      
+      fallStatus.className = fallDetectionActive ? 
+        "status-indicator active" : "status-indicator inactive";
+      fallValue.textContent = fallDetectionActive ? "Alert!" : "Standby";
+      
+      hudStatus.textContent = isCameraActive ? "Operational" : "Standby";
+    }
+
+    // Add entry to detection log
+    function addLogEntry(message) {
+      const logEntry = document.createElement("div");
+      logEntry.className = "log-entry";
+      logEntry.textContent = message;
+      detectionLog.appendChild(logEntry);
+      detectionLog.scrollTop = detectionLog.scrollHeight;
+      
+      // Keep log to a reasonable size
+      if (detectionLog.children.length > 50) {
+        detectionLog.removeChild(detectionLog.children[0]);
+      }
+    }
+
+    // Initialize settings controls
+    confidenceSlider.addEventListener("input", function() {
+      CONFIDENCE_THRESHOLD = parseFloat(this.value);
+      confidenceValue.textContent = CONFIDENCE_THRESHOLD.toFixed(1);
+      addLogEntry(Confidence threshold adjusted to ${CONFIDENCE_THRESHOLD.toFixed(1)});
+    });
+
+    audioToggle.addEventListener("change", function() {
+      audioEnabled = this.checked;
+      updateStatusIndicators();
+      addLogEntry(Audio feedback ${audioEnabled ? "enabled" : "disabled"});
+    });
+
+    autoContactToggle.addEventListener("change", function() {
+      autoContactEnabled = this.checked;
+      addLogEntry(Auto-contact ${autoContactEnabled ? "enabled" : "disabled"});
+    });
+
+    cooldownInput.addEventListener("change", function() {
+      ANNOUNCE_COOLDOWN = parseInt(this.value);
+      addLogEntry(Detection cooldown set to ${ANNOUNCE_COOLDOWN}ms);
+    });
+
+    // Start camera function
+    async function startCamera() {
+      try {
+        addLogEntry("Initializing vision system...");
+        startBtn.disabled = true;
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true
+        });
+        
+        video.srcObject = stream;
+        isCameraActive = true;
+        
+        // Wait for video to be ready
+        video.addEventListener('loadeddata', () => {
+          // Set canvas size to match video
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          addLogEntry(Vision system active (${video.videoWidth}x${video.videoHeight}));
+          addLogEntry("Beginning object detection sequence");
+          detectFrame();
+        }, { once: true });
+        
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        updateStatusIndicators();
+        
+      } catch (error) {
+        addLogEntry(System error: ${error.message});
+        console.error("Camera error:", error);
+        startBtn.disabled = false;
+      }
+    }
+
+    // Stop camera function
+    function stopCamera() {
+      if (video.srcObject) {
+        const tracks = video.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        video.srcObject = null;
+        
+        isCameraActive = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        
+        addLogEntry("Vision system terminated");
+        updateStatusIndicators();
+        
+        // Stop the detection loop
+        if (detectionInterval) {
+          cancelAnimationFrame(detectionInterval);
+        }
+      }
+    }
+
+    // Load the COCO-SSD model
+    async function loadModel() {
+      try {
+        addLogEntry("Loading neural network model...");
+        model = await cocoSsd.load();
+        isModelLoaded = true;
+        addLogEntry("COCO-SSD model loaded with 80 classes");
+        addLogEntry("AI system ready for object detection");
+        updateStatusIndicators();
+      } catch (error) {
+        addLogEntry(Model loading error: ${error.message});
+        console.error("Model loading error:", error);
+      }
+    }
+
+    // Get a distinct color for each class
+    function getClassColor(className) {
+      const index = ALL_COCO_CLASSES.indexOf(className);
+      const hue = (index * 137.508) % 360; // Golden angle approximation
+      return hsl(${hue}, 100%, 60%);
+    }
+
+    // Simulate a fall detection
+    function simulateFall() {
+      if (!isCameraActive) {
+        addLogEntry("Please initialize vision system first");
+        return;
+      }
+      
+      addLogEntry("Simulating fall detection...");
+      triggerFallDetection();
+    }
+
+    // Trigger fall detection emergency
+    function triggerFallDetection() {
+      fallDetectionActive = true;
+      updateStatusIndicators();
+      
+      // Show emergency alert
+      emergencyAlert.style.display = 'block';
+      
+      let countdown = 10;
+      countdownElement.textContent = countdown;
+      
+      addLogEntry("🚨 FALL DETECTED! Emergency protocol activated");
+      
+      if (audioEnabled) {
+        const utterance = new SpeechSynthesisUtterance("Warning! Fall detected. Emergency protocol activated.");
+        speechSynthesis.speak(utterance);
+      }
+      
+      // Start countdown to automatically contact emergency services
+      emergencyCountdown = setInterval(() => {
+        countdown--;
+        countdownElement.textContent = countdown;
+        
+        if (countdown <= 0) {
+          clearInterval(emergencyCountdown);
+          if (autoContactEnabled) {
+            contactEmergencyServices();
+          }
+        }
+      }, 1000);
+    }
+
+    // Cancel emergency alert
+    function cancelEmergency() {
+      clearInterval(emergencyCountdown);
+      emergencyAlert.style.display = 'none';
+      fallDetectionActive = false;
+      updateStatusIndicators();
+      addLogEntry("Emergency canceled. User is safe.");
+      
+      if (audioEnabled) {
+        const utterance = new SpeechSynthesisUtterance("Emergency canceled. User is safe.");
+        speechSynthesis.speak(utterance);
+      }
+    }
+
+    // Confirm emergency and contact services immediately
+    function confirmEmergency() {
+      clearInterval(emergencyCountdown);
+      contactEmergencyServices();
+    }
+
+    // Contact emergency services
+    function contactEmergencyServices() {
+      const contact = emergencyContact.value || "Emergency Services";
+      emergencyAlert.innerHTML = `
+        <h2>📞 CONTACTING EMERGENCY SERVICES</h2>
+        <p>Calling ${contact}...</p>
+        <p>Please stay on the line</p>
+      `;
+      
+      addLogEntry(Contacting ${contact} for emergency assistance);
+      
+      if (audioEnabled) {
+        const utterance = new SpeechSynthesisUtterance(Calling ${contact} for emergency assistance. Please stay on the line.);
+        speechSynthesis.speak(utterance);
+      }
+      
+      // Simulate the call process
+      setTimeout(() => {
+        emergencyAlert.innerHTML = `
+          <h2>✅ EMERGENCY ASSISTANCE ON THE WAY</h2>
+          <p>${contact} has been notified and help is on the way</p>
+          <p>Please remain where you are</p>
+        `;
+        
+        addLogEntry(${contact} notified. Help is on the way.);
+        
+        if (audioEnabled) {
+          const utterance = new SpeechSynthesisUtterance(${contact} has been notified and help is on the way. Please remain where you are.);
+          speechSynthesis.speak(utterance);
+        }
+        
+        // Close the alert after 5 seconds
+        setTimeout(() => {
+          emergencyAlert.style.display = 'none';
+          fallDetectionActive = false;
+          updateStatusIndicators();
+        }, 5000);
+      }, 3000);
+    }
+
+    // Main detection function
+    async function detectFrame() {
+      if (!isModelLoaded || !isCameraActive) return;
+      
+      try {
+        // Draw video frame to canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Run detection
+        const predictions = await model.detect(video);
+        
+        const now = Date.now();
+        let detectedCount = 0;
+        
+        predictions.forEach(pred => {
+          if (pred.score > CONFIDENCE_THRESHOLD && IMPORTANT_CLASSES.includes(pred.class)) {
+            detectedCount++;
+            const [x, y, w, h] = pred.bbox;
+            const color = getClassColor(pred.class);
+            
+            // Draw detection box
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, w, h);
+            
+            // Draw label background
+            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            ctx.fillRect(x, y > 10 ? y - 20 : 0, w, 20);
+            
+            // Draw label text
+            ctx.fillStyle = color;
+            ctx.font = "16px Arial";
+            ctx.fillText(
+              ${pred.class} (${Math.round(pred.score * 100)}%), 
+              x, 
+              y > 10 ? y - 5 : 15
+            );
+            
+            // Voice alert with cooldown
+            if (audioEnabled && (!detectionHistory[pred.class] || now - detectionHistory[pred.class] > ANNOUNCE_COOLDOWN)) {
+              const utterance = new SpeechSynthesisUtterance(${pred.class} ahead);
+              speechSynthesis.speak(utterance);
+              detectionHistory[pred.class] = now;
+              addLogEntry(Detected: ${pred.class} (${Math.round(pred.score * 100)}% confidence));
+            }
+          }
+        });
+        
+        // Update HUD with object count
+        hudObjects.textContent = detectedCount;
+        
+        // Update detection count in log if objects detected
+        if (detectedCount > 0) {
+          const logEntries = detectionLog.querySelectorAll('.log-entry');
+          const lastEntry = logEntries[logEntries.length - 1];
+          if (!lastEntry.textContent.includes('Detected:')) {
+            addLogEntry(Detected ${detectedCount} objects in frame);
+          }
+        }
+      } catch (error) {
+        console.error("Detection error:", error);
+      }
+      
+      // Continue detection loop
+      detectionInterval = requestAnimationFrame(detectFrame);
+    }
+
+    // Initialize the application
+    async function main() {
+      addLogEntry("Booting Guardian Vision OS v2.0");
+      addLogEntry("Initializing neural network...");
+      await loadModel();
+      addLogEntry("System ready. Initialize vision system to begin.");
+      updateStatusIndicators();
+    }
+
+    // Start the application
+    main();
+    
+    // Clean up on page exit
+    window.addEventListener('beforeunload', () => {
+      stopCamera();
+      if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+      }
+      if (emergencyCountdown) {
+        clearInterval(emergencyCountdown);
+      }
+    });
+  </script>
+</body>
+</html>
